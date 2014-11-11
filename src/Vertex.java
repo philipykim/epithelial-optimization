@@ -6,13 +6,17 @@ import java.util.List;
 
 public class Vertex extends Point2D.Double {
 	
+//	private static int count = 0;
+	
 	String name;
 	List<Vertex> connected;
+	int id;
 	
 	public Vertex(String name, double x, double y) {
 		super(x, y);
 		this.name = name;
 		connected = new ArrayList<Vertex>();
+//		id = count++;
 	}
 	
 	public void drawTo(Graphics2D gfx) {

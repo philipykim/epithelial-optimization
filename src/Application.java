@@ -10,8 +10,15 @@ public class Application {
 		World world = new World();
 		populate(world);
 		
-		JFrame app = new SimulationFrame(world);
+		SimulationFrame app = new SimulationFrame(world);
 		app.setVisible(true);
+		
+//		while (true) {
+//			try {
+//				Thread.sleep(10);
+//			} catch (InterruptedException e) {}
+//			app.step.doClick();
+//		}
 	}
 	
 	public static void populate(World world) {

@@ -18,6 +18,8 @@ public class Visualization extends JPanel {
 	public void paint(Graphics g) {
 		super.paintComponents(g);
 		Graphics2D gfx = (Graphics2D) g;
+		gfx.setBackground(Color.WHITE);
+		gfx.clearRect(0, 0, getWidth(), getHeight());
 		world.drawTo(gfx);
 	}
 

@@ -26,10 +26,13 @@ public class SimulationFrame extends JFrame {
 	
 	void setupLayout() {
 		// Create Elements
+		final JPanel visualization = new Visualization(world);
+		
 		step = new JButton("Step");
 		step.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				world.step();
+				visualization.update(visualization.getGraphics());
 			}
 		});
 		
@@ -42,7 +45,6 @@ public class SimulationFrame extends JFrame {
 		layout.setLayout(new BoxLayout(layout, BoxLayout.Y_AXIS));
 		panel.add(layout);
 		
-			JPanel visualization = new Visualization(world);
 			layout.add(visualization);
 		
 			Container bottomRow = new Container();
