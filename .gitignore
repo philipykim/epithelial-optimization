@@ -1,0 +1,16 @@
+
+# LaTeX artifacts
+*.aux
+*.log
+*.pdf
+*.synctex.gz
+
+# Binaries
+bin/**
+out/**
+
+src.zip
+
+# IDEA
+.idea/tasks.xml
+.idea/workspace.xml

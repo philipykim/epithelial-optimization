@@ -1,10 +1,5 @@
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-
-import javax.swing.JPanel;
+import javax.swing.*;
+import java.awt.*;
 
 public class Visualization extends JPanel {
 
@@ -12,7 +7,7 @@ public class Visualization extends JPanel {
 
 	public Visualization(World cellWorld) {
 		world = cellWorld;
-		setPreferredSize(new Dimension(600, 400));
+		setPreferredSize(new Dimension(800, 600));
 	}
 
 	public void paint(Graphics g) {
@@ -22,5 +17,4 @@ public class Visualization extends JPanel {
 		gfx.clearRect(0, 0, getWidth(), getHeight());
 		world.drawTo(gfx);
 	}
-
 }

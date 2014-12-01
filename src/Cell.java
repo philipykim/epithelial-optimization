@@ -1,26 +1,21 @@
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-
 public class Cell {
-	
 	String name;
 	List<Vertex> vertices;
-	double areaElasticity = 1;
-	double perimeterElasticity = 1;
-	double preferredArea = 1;
-	
+
 	/**
 	 * defines a cell by its vertices listed in clockwise direction
+	 *
 	 * @param vertexList
 	 */
 	public Cell(Vertex[] vertexList) {
 		vertices = new ArrayList<Vertex>();
-		for (Vertex v : vertexList)
-			vertices.add(v);
-		preferredArea = getArea(); // unless we know a better prefferedArea
+		Collections.addAll(vertices, vertexList);
 	}
-	
+
 	public double getArea() {
 		double area = 0;
 		int j = vertices.size() - 1;
@@ -29,10 +24,8 @@ public class Cell {
 			j = i;
 		}
 		return Math.abs(area / 2);
-		
 	}
 
-	
 	public double getArea(double[] v) {
 		double area = 0;
 		int j = vertices.size() - 1;
@@ -44,7 +37,7 @@ public class Cell {
 		}
 		return Math.abs(area / 2);
 	}
-	
+
 	public double getPerimeter() {
 		double perimeter = 0;
 		int j = vertices.size() - 1;
@@ -54,7 +47,7 @@ public class Cell {
 		}
 		return perimeter;
 	}
-	
+
 	public double getPerimeter(double[] v) {
 		double perimeter = 0;
 		int j = vertices.size() - 1;
@@ -66,17 +59,16 @@ public class Cell {
 		}
 		return perimeter;
 	}
-	
+
 	public double getEnergy() {
-		double dA = getArea() - preferredArea;
+		double dA = getArea() - Constants.preferredArea;
 		double L = getPerimeter();
-		return areaElasticity * dA * dA + perimeterElasticity * L * L;
+		return Constants.areaElasticity * dA * dA + Constants.perimeterElasticity * L * L;
 	}
-	
+
 	public double getEnergy(double[] v) {
-		double dA = getArea(v) - preferredArea;
+		double dA = getArea(v) - Constants.preferredArea;
 		double L = getPerimeter(v);
-		return areaElasticity * dA * dA + perimeterElasticity * L * L;
+		return Constants.areaElasticity * dA * dA + Constants.perimeterElasticity * L * L;
 	}
-	
 }
