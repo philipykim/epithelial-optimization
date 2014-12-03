@@ -2,6 +2,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.math3.analysis.MultivariateFunction;
@@ -37,12 +38,13 @@ public class World {
 		public double[] value(double[] points) throws IllegalArgumentException {
 			double[] gradient = new double[vertices.size()*2];
 			// Make a copy of the coordinates
-			double[] twiddle = new double[vertices.size() * 2];
-
-			for (int index = 0; index < vertices.size(); index++) {
-				twiddle[2 * index] = vertices.get(index).x;
-				twiddle[2 * index + 1] = vertices.get(index).y;
-			}
+//			double[] twiddle = new double[vertices.size() * 2];
+//
+//			for (int index = 0; index < vertices.size(); index++) {
+//				twiddle[2 * index] = vertices.get(index).x;
+//				twiddle[2 * index + 1] = vertices.get(index).y;
+//			}
+			double[] twiddle = Arrays.copyOf(points, points.length);
 
 			double maxSlope = 0;
 
@@ -53,15 +55,14 @@ public class World {
 				double upEnergy = computeEnergyFunctionParametrized(twiddle);
 
 				// Restore
-				Vertex vertex = vertices.get(index / 2);
-				twiddle[index] = index % 2 == 0 ? vertex.x : vertex.y;
+				twiddle[index] = points[index];
 
 				// Down
 				twiddle[index] -= Constants.epsilon;
 				double downEnergy = computeEnergyFunctionParametrized(twiddle);
 
 				// Restore
-				twiddle[index] = index % 2 == 0 ? vertex.x : vertex.y;
+				twiddle[index] = points[index];
 
 				// Partial derivative
 				double slope = (upEnergy - downEnergy) / (2 * Constants.epsilon);
@@ -141,13 +142,24 @@ public class World {
 
 	public void step() {
 		EnergyFunction e = new EnergyFunction();
-		
-		ConvergenceChecker<PointValuePair> spc = new SimpleValueChecker(1e-13, 1e-13);
+		ConvergenceChecker<PointValuePair> cc = new ConvergenceChecker<PointValuePair>() {
+			@Override
+			public boolean converged(int iteration, PointValuePair previous, PointValuePair current) {
+				
+				final double p = previous.getValue();
+				final double c = current.getValue();
+				final double difference = Math.abs(p - c);
+				final double size = Math.max(Math.abs(p), Math.abs(c));
+				System.out.println("Iterations = " + iteration);
+				return difference <= size * 1e-8 ||
+				    difference <= 1e-8;
+			}
+		};
+		ConvergenceChecker<PointValuePair> spc = new SimpleValueChecker(1e-6, 1e-6);
 		InitialGuess initGuess = new InitialGuess(getPoints());
-		MultivariateOptimizer optimizer = new NonLinearConjugateGradientOptimizer(NonLinearConjugateGradientOptimizer.Formula.FLETCHER_REEVES, spc);
-		PointValuePair optim = optimizer.optimize(new MaxEval(500), GoalType.MINIMIZE, initGuess, new ObjectiveFunction(e), new ObjectiveFunctionGradient(new EnergyFunctionGradient()));
+		MultivariateOptimizer optimizer = new NonLinearConjugateGradientOptimizer(NonLinearConjugateGradientOptimizer.Formula.POLAK_RIBIERE, cc);
+		PointValuePair optim = optimizer.optimize(new MaxEval(5000), GoalType.MINIMIZE, initGuess, new ObjectiveFunction(e), new ObjectiveFunctionGradient(new EnergyFunctionGradient()));
 		System.out.println(optim.getValue());
-		
 		double[] v = optim.getPoint();
 		for (int i = 0; i < vertices.size(); i++) {
 			vertices.get(i).setLocation(new Point2D.Double(v[2 * i], v[2 * i + 1]));
@@ -229,18 +241,17 @@ public class World {
 	}
 
 	public void update(double[] v) {
-		EnergyFunction e = new EnergyFunction();
-		
-		ConvergenceChecker<PointValuePair> spc = new SimpleValueChecker(1e-13, 1e-13);
-		InitialGuess initGuess = new InitialGuess(getPoints());
-		MultivariateOptimizer optimizer = new NonLinearConjugateGradientOptimizer(NonLinearConjugateGradientOptimizer.Formula.FLETCHER_REEVES, spc);
-		PointValuePair optim = optimizer.optimize(new MaxEval(200), GoalType.MINIMIZE, initGuess, new ObjectiveFunction(e), new ObjectiveFunctionGradient(new EnergyFunctionGradient()));
-		System.out.println(optim.getValue());
-		
-		v = optim.getPoint();
-		for (int i = 0; i < vertices.size(); i++) {
-			vertices.get(i).setLocation(new Point2D.Double(v[2 * i], v[2 * i + 1]));
-		}
+//		EnergyFunction e = new EnergyFunction();
+//		ConvergenceChecker<PointValuePair> spc = new SimpleValueChecker(1e-13, 1e-13);
+//		InitialGuess initGuess = new InitialGuess(getPoints());
+//		MultivariateOptimizer optimizer = new NonLinearConjugateGradientOptimizer(NonLinearConjugateGradientOptimizer.Formula.FLETCHER_REEVES, spc);
+//		PointValuePair optim = optimizer.optimize(new MaxEval(200), GoalType.MINIMIZE, initGuess, new ObjectiveFunction(e), new ObjectiveFunctionGradient(new EnergyFunctionGradient()));
+//		System.out.println(optim.getValue());
+//		
+//		v = optim.getPoint();
+//		for (int i = 0; i < vertices.size(); i++) {
+//			vertices.get(i).setLocation(new Point2D.Double(v[2 * i], v[2 * i + 1]));
+//		}
 	}
 
 }
