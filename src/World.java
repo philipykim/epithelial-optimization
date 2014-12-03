@@ -17,7 +17,6 @@ import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer;
 import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
 import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunctionGradient;
 import org.apache.commons.math3.optim.nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer;
-import org.apache.commons.math3.optimization.MultivariateMultiStartOptimizer;
 
 
 public class World {
@@ -25,6 +24,14 @@ public class World {
 	List<Cell> cells;
 	List<Edge> edges;
 	List<Vertex> vertices;
+	
+	PointValuePair optimal;
+	
+	//For linear interpolation between start and end state
+	//I figure we can show the transition betweent the start and end states
+	double[] initialState;
+	int maxSteps = 50;
+	int stepCount = 0;
 
 	private class EnergyFunction implements MultivariateFunction {
 		@Override
@@ -139,8 +146,8 @@ public class World {
 		}
 		return energy;
 	}
-
-	public void step() {
+	
+	public void optimize() {
 		EnergyFunction e = new EnergyFunction();
 		ConvergenceChecker<PointValuePair> cc = new ConvergenceChecker<PointValuePair>() {
 			@Override
@@ -150,21 +157,37 @@ public class World {
 				final double c = current.getValue();
 				final double difference = Math.abs(p - c);
 				final double size = Math.max(Math.abs(p), Math.abs(c));
-				System.out.println("Iterations = " + iteration);
 				return difference <= size * 1e-8 ||
 				    difference <= 1e-8;
 			}
 		};
 		ConvergenceChecker<PointValuePair> spc = new SimpleValueChecker(1e-6, 1e-6);
-		InitialGuess initGuess = new InitialGuess(getPoints());
+		initialState = getPoints();
+		InitialGuess initGuess = new InitialGuess(initialState);
 		MultivariateOptimizer optimizer = new NonLinearConjugateGradientOptimizer(NonLinearConjugateGradientOptimizer.Formula.POLAK_RIBIERE, cc);
 		PointValuePair optim = optimizer.optimize(new MaxEval(5000), GoalType.MINIMIZE, initGuess, new ObjectiveFunction(e), new ObjectiveFunctionGradient(new EnergyFunctionGradient()));
-		System.out.println(optim.getValue());
+		System.out.println("Optimal energy = " + optim.getValue());
 		double[] v = optim.getPoint();
-		for (int i = 0; i < vertices.size(); i++) {
-			vertices.get(i).setLocation(new Point2D.Double(v[2 * i], v[2 * i + 1]));
+		optimal = optim;
+	}
+
+	public void step() {
+		if (stepCount < maxSteps) {
+			double[] points = Arrays.copyOf(initialState, initialState.length);
+			double[] finalPoints = Arrays.copyOf(optimal.getPoint(), points.length);
+			double[] currentPoint = new double[points.length];
+			double t = (double)stepCount / maxSteps;
+			for (int i = 0; i < vertices.size(); i++) {
+				points[2*i] *= (1.0-t);
+				finalPoints[2*i] *= t;
+				points[2*i+1] *= (1.0-t);
+				finalPoints[2*i+1] *= t;
+				currentPoint[2*i] = points[2*i] + finalPoints[2*i];
+				currentPoint[2*i+1] = points[2*i+1] + finalPoints[2*i+1];
+				vertices.get(i).setLocation(new Point2D.Double(currentPoint[2*i], currentPoint[2*i+1]));
+			}
+			stepCount++;
 		}
-		
 //		double[] gradient = new double[vertices.size() * 2];
 //
 //		// Make a copy of the coordinates

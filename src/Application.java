@@ -3,6 +3,7 @@ public class Application {
 	public static void main(String args[]) {
 		World world = new World();
 		populate(world);
+		world.optimize();
 
 		SimulationFrame app = new SimulationFrame(world);
 		app.setVisible(true);
