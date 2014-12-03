@@ -32,6 +32,7 @@ public class Cell {
 		for (int i = 0; i < vertices.size(); i++) {
 			int id = vertices.get(i).id;
 			int jid = vertices.get(j).id;
+			
 			area += (v[2 * jid] + v[2 * id]) * (v[2 * jid + 1] - v[2 * id + 1]);
 			j = i;
 		}

@@ -4,7 +4,7 @@ import java.awt.Graphics2D;
 public class Edge {
 	Vertex start, end;
 	int id;
-
+	
 	public Edge(Vertex start, Vertex end) {
 		if (start.equals(end))
 			throw new IllegalArgumentException();

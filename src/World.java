@@ -4,6 +4,20 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.math3.analysis.MultivariateFunction;
+import org.apache.commons.math3.analysis.MultivariateVectorFunction;
+import org.apache.commons.math3.optim.ConvergenceChecker;
+import org.apache.commons.math3.optim.InitialGuess;
+import org.apache.commons.math3.optim.MaxEval;
+import org.apache.commons.math3.optim.PointValuePair;
+import org.apache.commons.math3.optim.SimpleValueChecker;
+import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
+import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer;
+import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
+import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunctionGradient;
+import org.apache.commons.math3.optim.nonlinear.scalar.gradient.NonLinearConjugateGradientOptimizer;
+import org.apache.commons.math3.optimization.MultivariateMultiStartOptimizer;
+
 
 public class World {
 
@@ -11,10 +25,66 @@ public class World {
 	List<Edge> edges;
 	List<Vertex> vertices;
 
+	private class EnergyFunction implements MultivariateFunction {
+		@Override
+		public double value(double[] points) {
+			return computeEnergyFunctionParametrized(points);
+		}
+	}
+	
+	private class EnergyFunctionGradient implements MultivariateVectorFunction {
+		@Override
+		public double[] value(double[] points) throws IllegalArgumentException {
+			double[] gradient = new double[vertices.size()*2];
+			// Make a copy of the coordinates
+			double[] twiddle = new double[vertices.size() * 2];
+
+			for (int index = 0; index < vertices.size(); index++) {
+				twiddle[2 * index] = vertices.get(index).x;
+				twiddle[2 * index + 1] = vertices.get(index).y;
+			}
+
+			double maxSlope = 0;
+
+			// Twiddle each dimension up and down and record the slope of the energy function
+			for (int index = 0; index < twiddle.length; index++) {
+				// Up
+				twiddle[index] += Constants.epsilon;
+				double upEnergy = computeEnergyFunctionParametrized(twiddle);
+
+				// Restore
+				Vertex vertex = vertices.get(index / 2);
+				twiddle[index] = index % 2 == 0 ? vertex.x : vertex.y;
+
+				// Down
+				twiddle[index] -= Constants.epsilon;
+				double downEnergy = computeEnergyFunctionParametrized(twiddle);
+
+				// Restore
+				twiddle[index] = index % 2 == 0 ? vertex.x : vertex.y;
+
+				// Partial derivative
+				double slope = (upEnergy - downEnergy) / (2 * Constants.epsilon);
+				maxSlope = Math.max(maxSlope, slope);
+				gradient[index] = slope;
+			}
+			return gradient;
+		}
+	}
+
 	public World() {
 		cells = new ArrayList<Cell>();
 		edges = new ArrayList<Edge>();
 		vertices = new ArrayList<Vertex>();
+	}
+	
+	double[] getPoints() {
+		double[] points = new double[vertices.size() * 2];
+		for (int i = 0; i < vertices.size(); i++) {
+			points[2 * i] = vertices.get(i).x;
+			points[2*i+1] = vertices.get(i).y;
+		}
+		return points;
 	}
 
 	public void add(Cell c) {
@@ -70,46 +140,59 @@ public class World {
 	}
 
 	public void step() {
-		double[] gradient = new double[vertices.size() * 2];
-
-		// Make a copy of the coordinates
-		double[] twiddle = new double[vertices.size() * 2];
-
-		for (int index = 0; index < vertices.size(); index++) {
-			twiddle[2 * index] = vertices.get(index).x;
-			twiddle[2 * index + 1] = vertices.get(index).y;
+		EnergyFunction e = new EnergyFunction();
+		
+		ConvergenceChecker<PointValuePair> spc = new SimpleValueChecker(1e-13, 1e-13);
+		InitialGuess initGuess = new InitialGuess(getPoints());
+		MultivariateOptimizer optimizer = new NonLinearConjugateGradientOptimizer(NonLinearConjugateGradientOptimizer.Formula.FLETCHER_REEVES, spc);
+		PointValuePair optim = optimizer.optimize(new MaxEval(500), GoalType.MINIMIZE, initGuess, new ObjectiveFunction(e), new ObjectiveFunctionGradient(new EnergyFunctionGradient()));
+		System.out.println(optim.getValue());
+		
+		double[] v = optim.getPoint();
+		for (int i = 0; i < vertices.size(); i++) {
+			vertices.get(i).setLocation(new Point2D.Double(v[2 * i], v[2 * i + 1]));
 		}
-
-		double maxSlope = 0;
-
-		// Twiddle each dimension up and down and record the slope of the energy function
-		for (int index = 0; index < twiddle.length; index++) {
-			// Up
-			twiddle[index] += Constants.epsilon;
-			double upEnergy = computeEnergyFunctionParametrized(twiddle);
-
-			// Restore
-			Vertex vertex = vertices.get(index / 2);
-			twiddle[index] = index % 2 == 0 ? vertex.x : vertex.y;
-
-			// Down
-			twiddle[index] -= Constants.epsilon;
-			double downEnergy = computeEnergyFunctionParametrized(twiddle);
-
-			// Restore
-			twiddle[index] = index % 2 == 0 ? vertex.x : vertex.y;
-
-			// Partial derivative
-			double slope = (upEnergy - downEnergy) / (2 * Constants.epsilon);
-			maxSlope = Math.max(maxSlope, slope);
-			gradient[index] = slope;
-		}
-
-		for (int index = 0; index < twiddle.length; index++) {
-			twiddle[index] -= gradient[index] / maxSlope * 1.0; // step size = 1
-		}
-
-		update(twiddle);
+		
+//		double[] gradient = new double[vertices.size() * 2];
+//
+//		// Make a copy of the coordinates
+//		double[] twiddle = new double[vertices.size() * 2];
+//
+//		for (int index = 0; index < vertices.size(); index++) {
+//			twiddle[2 * index] = vertices.get(index).x;
+//			twiddle[2 * index + 1] = vertices.get(index).y;
+//		}
+//
+//		double maxSlope = 0;
+//
+//		// Twiddle each dimension up and down and record the slope of the energy function
+//		for (int index = 0; index < twiddle.length; index++) {
+//			// Up
+//			twiddle[index] += Constants.epsilon;
+//			double upEnergy = computeEnergyFunctionParametrized(twiddle);
+//
+//			// Restore
+//			Vertex vertex = vertices.get(index / 2);
+//			twiddle[index] = index % 2 == 0 ? vertex.x : vertex.y;
+//
+//			// Down
+//			twiddle[index] -= Constants.epsilon;
+//			double downEnergy = computeEnergyFunctionParametrized(twiddle);
+//
+//			// Restore
+//			twiddle[index] = index % 2 == 0 ? vertex.x : vertex.y;
+//
+//			// Partial derivative
+//			double slope = (upEnergy - downEnergy) / (2 * Constants.epsilon);
+//			maxSlope = Math.max(maxSlope, slope);
+//			gradient[index] = slope;
+//		}
+//
+//		for (int index = 0; index < twiddle.length; index++) {
+//			twiddle[index] -= gradient[index] / maxSlope * 1.0; // step size = 1
+//		}
+//
+//		update(twiddle);
 	}
 
 	public void randomWalkStep() {
@@ -146,6 +229,15 @@ public class World {
 	}
 
 	public void update(double[] v) {
+		EnergyFunction e = new EnergyFunction();
+		
+		ConvergenceChecker<PointValuePair> spc = new SimpleValueChecker(1e-13, 1e-13);
+		InitialGuess initGuess = new InitialGuess(getPoints());
+		MultivariateOptimizer optimizer = new NonLinearConjugateGradientOptimizer(NonLinearConjugateGradientOptimizer.Formula.FLETCHER_REEVES, spc);
+		PointValuePair optim = optimizer.optimize(new MaxEval(200), GoalType.MINIMIZE, initGuess, new ObjectiveFunction(e), new ObjectiveFunctionGradient(new EnergyFunctionGradient()));
+		System.out.println(optim.getValue());
+		
+		v = optim.getPoint();
 		for (int i = 0; i < vertices.size(); i++) {
 			vertices.get(i).setLocation(new Point2D.Double(v[2 * i], v[2 * i + 1]));
 		}
